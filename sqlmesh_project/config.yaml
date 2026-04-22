@@ -1,0 +1,35 @@
+project: locadora_dwh
+
+gateways:
+  dev:
+    connection:
+      type: postgres
+      host: "{{ env_var('LOCADORA_DWH_HOST', 'localhost') }}"
+      port: "{{ env_var('LOCADORA_DWH_PORT', '5433') | int }}"
+      user: "{{ env_var('LOCADORA_DWH_USER', 'locadora_admin') }}"
+      password: "{{ env_var('LOCADORA_DWH_PASSWORD', 'locadora_secret_2024') }}"
+      database: "{{ env_var('LOCADORA_DWH_DB', 'locadora_dwh') }}"
+      concurrent_tasks: 4
+
+  prod:
+    connection:
+      type: postgres
+      host: "{{ env_var('LOCADORA_DWH_HOST', 'localhost') }}"
+      port: "{{ env_var('LOCADORA_DWH_PORT', '5433') | int }}"
+      user: "{{ env_var('LOCADORA_DWH_USER', 'locadora_admin') }}"
+      password: "{{ env_var('LOCADORA_DWH_PASSWORD', 'locadora_secret_2024') }}"
+      database: "{{ env_var('LOCADORA_DWH_DB', 'locadora_dwh') }}"
+      concurrent_tasks: 8
+
+default_gateway: dev
+
+model_defaults:
+  dialect: postgres
+  kind: full
+  owner: data_engineering@locadora.dw
+  cron: '@daily'
+
+variables:
+  oltp_schema: locadora_dw
+  data_inicio_dwh: '2020-01-01'
+  tz_default: 'America/Sao_Paulo'

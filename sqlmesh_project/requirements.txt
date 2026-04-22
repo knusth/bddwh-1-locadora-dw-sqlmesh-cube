@@ -1,0 +1,9 @@
+# =============================================================================
+# Dependências Python para execução do SQLMesh no projeto Locadora DWH
+# Instalar: pip install -r requirements.txt
+# =============================================================================
+
+sqlmesh[postgres]>=0.100.0
+pandas>=2.0.0
+numpy>=1.24.0
+psycopg2-binary>=2.9.9

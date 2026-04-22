@@ -1,0 +1,24 @@
+# =============================================================================
+# Dockerfile.generator
+# Imagem Node.js 20 para execução do gerador de dados fake.
+# =============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /generator
+
+# Instala dependências
+COPY scripts/generator-js/package.json ./
+RUN npm install
+
+# Workaround: faker-brasil tem bug de case sensitivity no Linux
+# O código importa 'RandomarrayElement' mas o arquivo é 'RandomArrayElement.js'
+RUN cp /generator/node_modules/faker-brasil/src/services/RandomArrayElement.js \
+       /generator/node_modules/faker-brasil/src/services/RandomarrayElement.js
+
+# Copia código fonte
+COPY scripts/generator-js/ ./
+
+# Entrypoint padrão: escala medium
+ENTRYPOINT ["node", "index.js"]
+CMD ["--scale", "medium"]

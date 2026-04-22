@@ -1,0 +1,27 @@
+{
+  "name": "locadora-data-generator",
+  "version": "1.0.0",
+  "description": "Gerador de dados fake para o banco OLTP da locadora de veículos",
+  "main": "index.js",
+  "scripts": {
+    "generate": "node index.js --scale medium",
+    "generate:large": "node index.js --scale large",
+    "clean": "node index.js --clean",
+    "start": "node index.js"
+  },
+  "keywords": ["faker", "postgresql", "locadora", "data-generator"],
+  "author": "Data Engineering Team",
+  "license": "MIT",
+  "dependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
+    "faker-brasil": "^1.0.2",
+    "ora": "^5.4.1",
+    "p-limit": "^3.1.0",
+    "pg": "^8.12.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "OLTP - Locadora DW",
+            "Group": "Locadora",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "locadora_dw",
+            "Username": "locadora_admin",
+            "SSLMode": "prefer",
+            "PassFile": "/pgadmin4/pgpass",
+            "Comment": "Banco transacional OLTP da locadora"
+        },
+        "2": {
+            "Name": "DWH - Locadora DW",
+            "Group": "Locadora",
+            "Host": "postgres-dwh",
+            "Port": 5432,
+            "MaintenanceDB": "locadora_dwh",
+            "Username": "locadora_admin",
+            "SSLMode": "prefer",
+            "PassFile": "/pgadmin4/pgpass",
+            "Comment": "Data Warehouse analítico"
+        }
+    }
+}

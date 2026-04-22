@@ -1,0 +1,2 @@
+postgres:5432:locadora_dw:locadora_admin:locadora_secret_2024
+postgres-dwh:5432:locadora_dwh:locadora_admin:locadora_secret_2024

@@ -1,0 +1,208 @@
+services:
+  # ==========================================================================
+  # OLTP - Banco transacional da locadora
+  # ==========================================================================
+  postgres:
+    image: postgres:17-alpine
+    container_name: locadora_postgres
+    environment:
+      POSTGRES_USER: locadora_admin
+      POSTGRES_PASSWORD: locadora_secret_2024
+      POSTGRES_DB: locadora_dw
+      PGUSER: locadora_admin
+      PGPASSWORD: locadora_secret_2024
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+      - ./scripts:/scripts
+      - ./seed:/seed
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locadora_admin -d locadora_dw"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - locadora_network
+
+  # ==========================================================================
+  # DWH - Banco analítico tunado para SQLMesh
+  # ==========================================================================
+  postgres-dwh:
+    build:
+      context: ./postgres-dwh
+      dockerfile: Dockerfile
+    container_name: locadora_postgres_dwh
+    environment:
+      POSTGRES_USER: locadora_admin
+      POSTGRES_PASSWORD: locadora_secret_2024
+      POSTGRES_DB: locadora_dwh
+      PGUSER: locadora_admin
+      PGPASSWORD: locadora_secret_2024
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dwh_data:/var/lib/postgresql/data
+      - ./postgres-dwh/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locadora_admin -d locadora_dwh"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - locadora_network
+
+  # ==========================================================================
+  # PgAdmin - Interface gráfica (conecta em ambos os bancos)
+  # ==========================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: locadora_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@locadora.dw
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/pgadmin4/pgpass:ro
+    command: >
+      sh -c "chmod 600 /pgadmin4/pgpass && /entrypoint.sh"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-dwh:
+        condition: service_healthy
+    networks:
+      - locadora_network
+
+  # ==========================================================================
+  # Migrations Runner - Executa migrations no OLTP
+  # ==========================================================================
+  migrations:
+    image: postgres:17-alpine
+    container_name: locadora_migrations
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: locadora_admin
+      PGPASSWORD: locadora_secret_2024
+      PGDATABASE: locadora_dw
+    volumes:
+      - ./migrations:/migrations
+      - ./scripts:/scripts
+    entrypoint: ["/bin/sh", "/scripts/run_migrations.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - locadora_network
+    profiles:
+      - migrations
+
+  # ==========================================================================
+  # SQLMesh Runner - Container utilitário para execução do SQLMesh
+  # ==========================================================================
+  sqlmesh:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile.sqlmesh
+    container_name: locadora_sqlmesh
+    environment:
+      # Conexão OLTP (fonte)
+      LOCADORA_OLTP_HOST: postgres
+      LOCADORA_OLTP_PORT: 5432
+      LOCADORA_OLTP_USER: locadora_admin
+      LOCADORA_OLTP_PASSWORD: locadora_secret_2024
+      LOCADORA_OLTP_DB: locadora_dw
+      # Conexão DWH (destino)
+      LOCADORA_DWH_HOST: postgres-dwh
+      LOCADORA_DWH_PORT: 5432
+      LOCADORA_DWH_USER: locadora_admin
+      LOCADORA_DWH_PASSWORD: locadora_secret_2024
+      LOCADORA_DWH_DB: locadora_dwh
+    volumes:
+      - ./sqlmesh_project:/sqlmesh_project
+      - sqlmesh_cache:/root/.cache/sqlmesh
+    working_dir: /sqlmesh_project
+    stdin_open: true
+    tty: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-dwh:
+        condition: service_healthy
+    networks:
+      - locadora_network
+    profiles:
+      - sqlmesh
+
+  # ==========================================================================
+  # Data Generator - Gera dados fake sintéticos e consistentes no OLTP
+  # ==========================================================================
+  generator:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile.generator
+    container_name: locadora_generator
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: locadora_admin
+      PGPASSWORD: locadora_secret_2024
+      PGDATABASE: locadora_dw
+    working_dir: /generator
+    command: ["--scale", "medium"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - locadora_network
+    profiles:
+      - generator
+
+  # ==========================================================================
+  # Cube.dev - Semantic Layer / Analytics API
+  # ==========================================================================
+  cube:
+    image: cubejs/cube:latest
+    container_name: locadora_cube
+    ports:
+      - "4000:4000"
+    environment:
+      CUBEJS_DEV_MODE: "true"
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: postgres-dwh
+      CUBEJS_DB_PORT: 5432
+      CUBEJS_DB_NAME: locadora_dwh
+      CUBEJS_DB_USER: locadora_admin
+      CUBEJS_DB_PASS: locadora_secret_2024
+      CUBEJS_DB_SCHEMA: marts__dev
+      CUBEJS_API_SECRET: locadora_cube_secret_2024
+      CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
+      CUBEJS_PG_SQL_PORT: "15432"
+      CUBEJS_SQL_USER: cube
+      CUBEJS_SQL_PASSWORD: cube_secret
+    volumes:
+      - ./cube:/cube/conf
+    depends_on:
+      postgres-dwh:
+        condition: service_healthy
+    networks:
+      - locadora_network
+
+volumes:
+  postgres_data:
+  postgres_dwh_data:
+  pgadmin_data:
+  sqlmesh_cache:
+
+networks:
+  locadora_network:
+    driver: bridge

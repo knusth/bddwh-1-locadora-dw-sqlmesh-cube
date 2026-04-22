@@ -1,0 +1,18 @@
+# SQLMesh cache e artefatos temporários
+.cache/
+.sqlmesh/
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+venv/
+.env
+
+# IDEs
+.vscode/
+.idea/
