@@ -4,7 +4,7 @@
 
 **Disciplina:** Modelagem de Data Warehouse  
 **Tarefa:** Avaliação 01 — Parte I (Modelagem SBD OLTP)  
-**Grupo:** [Preencher nomes e DRE]  
+**Grupo:** Hygor Goulart Knust - 117124785 
 **Data:** Abril/2026
 
 ---
